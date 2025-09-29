@@ -5,9 +5,9 @@ Setup:
 Add some test tasks:
 
   $ xt Sample one.
-  3
+  1
   $ xt Sample two.
-  7
+  2
 
 Bad prefix:
 
@@ -18,159 +18,157 @@ Bad prefix:
   error: the ID "BAD" does not match any task
   [1]
   $ xt
-  3 - Sample one.
-  7 - Sample two.
+  1 - Sample one.
+  2 - Sample two.
 
 Ambiguous identifiers:
 
   $ xt 1
-  35
+  3
   $ xt 2
-  d
+  4
   $ xt 3
-  77
+  5
   $ xt 4
-  1
+  6
   $ xt 5
-  a
+  7
   $ xt 6
-  c
+  8
   $ xt 7
   9
   $ xt 8
-  f
+  10
   $ xt 9
-  0
+  11
   $ xt 10
-  b
+  12
   $ xt 11
-  17
+  13
   $ xt 12
-  7b
+  14
   $ xt 13
-  bd
+  15
   $ xt 14
-  fa
+  16
   $ xt -f 1
+  $ xt -f 2
+  $ xt -f 1
+  error: the ID "1" matches more than one task
+  [1]
+  $ xt -e 1
   error: the ID "1" matches more than one task
   [1]
   $ xt -f e This should not be replaced.
   error: the ID "e" does not match any task
   [1]
   $ xt
-  0  - 9
-  17 - 11
-  1b - 4
-  32 - Sample one.
-  35 - 1
-  77 - 3
-  7a - Sample two.
-  7b - 12
+  3  - 1
+  4  - 2
+  5  - 3
+  6  - 4
+  7  - 5
+  8  - 6
   9  - 7
-  a  - 5
-  b1 - 10
-  bd - 13
-  c  - 6
-  d  - 2
-  fa - 14
-  fe - 8
+  10 - 8
+  11 - 9
+  12 - 10
+  13 - 11
+  14 - 12
+  15 - 13
+  16 - 14
 
 Even more ambiguity:
 
   $ xt 1test
-  e
+  17
   $ xt 2test
-  5
+  18
   $ xt 3test
-  95
+  19
   $ xt 4test
-  36
-  $ xt 5test
   2
+  $ xt 5test
+  21
   $ xt 6test
-  14
+  22
   $ xt 7test
-  a1
+  23
   $ xt 8test
-  07
+  24
   $ xt 9test
-  0e
+  25
   $ xt 10test
-  b10
+  26
   $ xt 11test
-  6
+  27
   $ xt 12test
-  8
+  28
   $ xt 13test
-  c7
+  29
   $ xt 14test
-  ef
+  30
   $ xt
-  07  - 8test
-  0a  - 9
-  0e  - 9test
-  14  - 6test
-  17  - 11
-  1b  - 4
-  2   - 5test
-  32  - Sample one.
-  35  - 1
-  36  - 4test
-  5   - 2test
-  6   - 11test
-  77  - 3
-  7a  - Sample two.
-  7b  - 12
-  8   - 12test
-  90  - 7
-  95  - 3test
-  a1  - 7test
-  ac  - 5
-  b10 - 10test
-  b1d - 10
-  bd  - 13
-  c1  - 6
-  c7  - 13test
-  d   - 2
-  ee  - 1test
-  ef  - 14test
-  fa  - 14
-  fe  - 8
-  $ xt -f b1
-  error: the ID "b1" matches more than one task
+  3  - 1
+  4  - 2
+  5  - 3
+  6  - 4
+  7  - 5
+  8  - 6
+  9  - 7
+  10 - 8
+  11 - 9
+  12 - 10
+  13 - 11
+  14 - 12
+  15 - 13
+  16 - 14
+  17 - 1test
+  18 - 2test
+  19 - 3test
+  20 - 4test
+  21 - 5test
+  22 - 6test
+  23 - 7test
+  24 - 8test
+  25 - 9test
+  26 - 10test
+  27 - 11test
+  28 - 12test
+  29 - 13test
+  30 - 14test
+  $ xt -f 2
+  error: the ID "2" matches more than one task
   [1]
-  $ xt -e b1
-  error: the ID "b1" matches more than one task
+  $ xt -e 2
+  error: the ID "2" matches more than one task
   [1]
   $ xt
-  07  - 8test
-  0a  - 9
-  0e  - 9test
-  14  - 6test
-  17  - 11
-  1b  - 4
-  2   - 5test
-  32  - Sample one.
-  35  - 1
-  36  - 4test
-  5   - 2test
-  6   - 11test
-  77  - 3
-  7a  - Sample two.
-  7b  - 12
-  8   - 12test
-  90  - 7
-  95  - 3test
-  a1  - 7test
-  ac  - 5
-  b10 - 10test
-  b1d - 10
-  bd  - 13
-  c1  - 6
-  c7  - 13test
-  d   - 2
-  ee  - 1test
-  ef  - 14test
-  fa  - 14
-  fe  - 8
-
+  3  - 1
+  4  - 2
+  5  - 3
+  6  - 4
+  7  - 5
+  8  - 6
+  9  - 7
+  10 - 8
+  11 - 9
+  12 - 10
+  13 - 11
+  14 - 12
+  15 - 13
+  16 - 14
+  17 - 1test
+  18 - 2test
+  19 - 3test
+  20 - 4test
+  21 - 5test
+  22 - 6test
+  23 - 7test
+  24 - 8test
+  25 - 9test
+  26 - 10test
+  27 - 11test
+  28 - 12test
+  29 - 13test
+  30 - 14test

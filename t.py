@@ -5,7 +5,6 @@
 from __future__ import with_statement, print_function
 
 import os, re, sys, hashlib
-from operator import itemgetter
 from optparse import OptionParser, OptionGroup
 
 
@@ -83,6 +82,20 @@ def _tasklines_from_tasks(tasks):
 
     return tasklines
 
+
+def _task_id_sort_key(task_id):
+    """Return a tuple suitable for sorting task ids.
+
+    Numeric identifiers are sorted by their numeric value to ensure tasks keep
+    their creation order.  Non-numeric identifiers (for legacy hashes) are
+    grouped after numeric ones and sorted lexicographically to provide a stable
+    order.
+    """
+
+    if isinstance(task_id, str) and task_id.isdigit():
+        return (0, int(task_id))
+    return (1, task_id)
+
 def _prefixes(ids):
     """Return a mapping of ids to prefixes in O(n) time.
 
@@ -135,6 +148,7 @@ class TaskDict(object):
         self.done = {}
         self.name = name
         self.taskdir = taskdir
+        self._next_id = 1
         filemap = (('tasks', self.name), ('done', '.%s.done' % self.name))
         for kind, filename in filemap:
             path = os.path.join(os.path.expanduser(self.taskdir), filename)
@@ -147,7 +161,13 @@ class TaskDict(object):
                         tasks = map(_task_from_taskline, tls)
                         for task in tasks:
                             if task is not None:
-                                getattr(self, kind)[task['id']] = task
+                                task_id = task.get('id')
+                                if not task_id:
+                                    task_id = self._allocate_id()
+                                    task['id'] = task_id
+                                else:
+                                    self._update_next_id(task_id)
+                                getattr(self, kind)[task_id] = task
                 except IOError as e:
                     raise BadFile(path, e.strerror)
 
@@ -170,9 +190,18 @@ class TaskDict(object):
         else:
             raise AmbiguousPrefix(prefix)
 
+    def _update_next_id(self, task_id):
+        if isinstance(task_id, str) and task_id.isdigit():
+            self._next_id = max(self._next_id, int(task_id) + 1)
+
+    def _allocate_id(self):
+        task_id = str(self._next_id)
+        self._next_id += 1
+        return task_id
+
     def add_task(self, text, verbose, quiet):
         """Add a new, unfinished task with the given summary text."""
-        task_id = _hash(text)
+        task_id = self._allocate_id()
         self.tasks[task_id] = {'id': task_id, 'text': text}
 
         if not quiet:
@@ -198,7 +227,6 @@ class TaskDict(object):
             text = re.sub(find, repl, task['text'])
 
         task['text'] = text
-        task['id'] = _hash(text)
 
     def finish_task(self, prefix):
         """Mark the task with the given prefix as finished.
@@ -232,7 +260,7 @@ class TaskDict(object):
                 tasks[task_id]['prefix'] = prefix
 
         plen = max(map(lambda t: len(t[label]), tasks.values())) if tasks else 0
-        for _, task in sorted(tasks.items()):
+        for _, task in sorted(tasks.items(), key=lambda item: _task_id_sort_key(item[0])):
             if grep.lower() in task['text'].lower():
                 p = '%s - ' % task[label].ljust(plen) if not quiet else ''
                 print(p + task['text'])
@@ -244,7 +272,7 @@ class TaskDict(object):
             path = os.path.join(os.path.expanduser(self.taskdir), filename)
             if os.path.isdir(path):
                 raise InvalidTaskfile
-            tasks = sorted(getattr(self, kind).values(), key=itemgetter('id'))
+            tasks = sorted(getattr(self, kind).values(), key=lambda t: _task_id_sort_key(t['id']))
             if tasks or not delete_if_empty:
                 try:
                     with open(path, 'w') as tfile:

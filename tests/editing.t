@@ -5,34 +5,30 @@ Setup:
 Replace a task's text (preserving the ID):
 
   $ xt Sample.
-  a
+  1
   $ xt
-  a - Sample.
-  $ xt -e a New sample.
+  1 - Sample.
+  $ xt -e 1 New sample.
   $ xt
-  d - New sample.
+  1 - New sample.
   $ xt 'this | that'
-  4
+  2
   $ xt
-  4 - this | that
-  d - New sample.
-  $ xt -e 4 'this &| that'
+  1 - New sample.
+  2 - this | that
+  $ xt -e 2 'this &| that'
   $ xt
-  d1 - this &| that
-  df - New sample.
+  1 - New sample.
+  2 - this &| that
 
 Sed-style substitution:
 
-  $ xt -e a 's/New/Testing/'
-  error: the ID "a" does not match any task
-  [1]
+  $ xt -e 1 's/New/Testing/'
   $ xt
-  d1 - this &| that
-  df - New sample.
-  $ xt -e 4 '/this &/this /'
-  error: the ID "4" does not match any task
-  [1]
+  1 - Testing sample.
+  2 - this &| that
+  $ xt -e 2 '/this &/this /'
   $ xt
-  d1 - this &| that
-  df - New sample.
+  1 - Testing sample.
+  2 - this | that
 

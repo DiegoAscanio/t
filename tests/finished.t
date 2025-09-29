@@ -5,41 +5,40 @@ Setup:
 Add some tasks:
 
   $ xt Sample one.
-  3
-  $ xt Sample two.
-  7
-  $ xt Sample three.
-  9
-  $ xt Sample four.
   1
-  $ xt 'this | that'
+  $ xt Sample two.
+  2
+  $ xt Sample three.
+  3
+  $ xt Sample four.
   4
+  $ xt 'this | that'
+  5
 
 Finish and test .test.done:
 
   $ xt -f 1
   $ cat .test.done
-  Sample four. | id:1dd56b09a9ca0fdf4f2a8c0959a298098eb8f7de
-  $ xt -f 7
+  Sample one. | id:1
+  $ xt -f 2
   $ cat .test.done
-  Sample four. | id:1dd56b09a9ca0fdf4f2a8c0959a298098eb8f7de
-  Sample two. | id:7a4dc18c23f3b890602da09da1690ccfb4c87bd1
+  Sample one. | id:1
+  Sample two. | id:2
   $ xt -f 3
   $ cat .test.done
-  Sample four. | id:1dd56b09a9ca0fdf4f2a8c0959a298098eb8f7de
-  Sample one. | id:329950673481cb1c19102c982bfc63e745ab4a6f
-  Sample two. | id:7a4dc18c23f3b890602da09da1690ccfb4c87bd1
-  $ xt -f 9
-  $ cat .test.done
-  Sample four. | id:1dd56b09a9ca0fdf4f2a8c0959a298098eb8f7de
-  Sample one. | id:329950673481cb1c19102c982bfc63e745ab4a6f
-  Sample two. | id:7a4dc18c23f3b890602da09da1690ccfb4c87bd1
-  Sample three. | id:90cf0626ca134e0aa6453b3562dc1c8bb34f1568
+  Sample one. | id:1
+  Sample two. | id:2
+  Sample three. | id:3
   $ xt -f 4
-  $ cat .test.done 
-  Sample four. | id:1dd56b09a9ca0fdf4f2a8c0959a298098eb8f7de
-  Sample one. | id:329950673481cb1c19102c982bfc63e745ab4a6f
-  this | that | id:48ad7c827191fa3c896d13b47f618ff1732e911e
-  Sample two. | id:7a4dc18c23f3b890602da09da1690ccfb4c87bd1
-  Sample three. | id:90cf0626ca134e0aa6453b3562dc1c8bb34f1568
-
+  $ cat .test.done
+  Sample one. | id:1
+  Sample two. | id:2
+  Sample three. | id:3
+  Sample four. | id:4
+  $ xt -f 5
+  $ cat .test.done
+  Sample one. | id:1
+  Sample two. | id:2
+  Sample three. | id:3
+  Sample four. | id:4
+  this | that | id:5

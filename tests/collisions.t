@@ -5,106 +5,106 @@ Setup:
 Make some tasks that collide in their first letter:
 
   $ xt 1
-  3
-  $ xt 2
-  d
-  $ xt 3
-  7
-  $ xt 4
   1
+  $ xt 2
+  2
+  $ xt 3
+  3
+  $ xt 4
+  4
   $ xt 5
-  a
+  5
   $ xt 6
-  c
+  6
   $ xt 7
-  9
+  7
   $ xt 8
-  f
+  8
   $ xt 9
-  0
+  9
   $ xt 10
-  b
+  10
   $ xt 11
-  17
+  11
   $ xt 12
-  7b
+  12
   $ xt 13
-  bd
+  13
   $ xt 14
-  fa
+  14
   $ xt
-  0  - 9
-  17 - 11
-  1b - 4
-  3  - 1
-  77 - 3
-  7b - 12
-  9  - 7
-  a  - 5
-  b1 - 10
-  bd - 13
-  c  - 6
-  d  - 2
-  fa - 14
-  fe - 8
+  1  - 1
+  2  - 2
+  3  - 3
+  4  - 4
+  5  - 5
+  6  - 6
+  7  - 7
+  8  - 8
+  9  - 9
+  10 - 10
+  11 - 11
+  12 - 12
+  13 - 13
+  14 - 14
 
 Even more ambiguity:
 
   $ xt 1test
-  e
+  15
   $ xt 2test
-  5
+  16
   $ xt 3test
-  95
+  17
   $ xt 4test
-  36
+  18
   $ xt 5test
-  2
+  19
   $ xt 6test
-  14
+  20
   $ xt 7test
-  a1
+  21
   $ xt 8test
-  07
+  22
   $ xt 9test
-  0e
+  23
   $ xt 10test
-  b10
+  24
   $ xt 11test
-  6
+  25
   $ xt 12test
-  8
+  26
   $ xt 13test
-  c7
+  27
   $ xt 14test
-  ef
+  28
   $ xt
-  07  - 8test
-  0a  - 9
-  0e  - 9test
-  14  - 6test
-  17  - 11
-  1b  - 4
-  2   - 5test
-  35  - 1
-  36  - 4test
-  5   - 2test
-  6   - 11test
-  77  - 3
-  7b  - 12
-  8   - 12test
-  90  - 7
-  95  - 3test
-  a1  - 7test
-  ac  - 5
-  b10 - 10test
-  b1d - 10
-  bd  - 13
-  c1  - 6
-  c7  - 13test
-  d   - 2
-  ee  - 1test
-  ef  - 14test
-  fa  - 14
-  fe  - 8
+  1  - 1
+  2  - 2
+  3  - 3
+  4  - 4
+  5  - 5
+  6  - 6
+  7  - 7
+  8  - 8
+  9  - 9
+  10 - 10
+  11 - 11
+  12 - 12
+  13 - 13
+  14 - 14
+  15 - 1test
+  16 - 2test
+  17 - 3test
+  18 - 4test
+  19 - 5test
+  20 - 6test
+  21 - 7test
+  22 - 8test
+  23 - 9test
+  24 - 10test
+  25 - 11test
+  26 - 12test
+  27 - 13test
+  28 - 14test
 
