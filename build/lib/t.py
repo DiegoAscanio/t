@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 
-"""
-    diego's t is for people that want do things while organzing them a little bit
-    through uuid7 time-sortable unique identifiers.
-"""
+"""t is for people that want do things ."""
 
 from __future__ import with_statement, print_function
 
