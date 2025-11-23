@@ -1,8 +1,0 @@
-LICENSE
-setup.py
-t.py
-t.egg-info/PKG-INFO
-t.egg-info/SOURCES.txt
-t.egg-info/dependency_links.txt
-t.egg-info/entry_points.txt
-t.egg-info/top_level.txt
