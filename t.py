@@ -5,13 +5,9 @@
 from __future__ import with_statement, print_function
 
 import os, re, sys, hashlib
-from operator import itemgetter
 from optparse import OptionParser, OptionGroup
-from uuid_utils import uuid7, UUID
-from itertools import starmap
-from pdb import set_trace
-import time
-
+import string
+import numpy as np
 
 class InvalidTaskfile(Exception):
     """Raised when the path to a task file already exists as a directory."""
@@ -44,97 +40,139 @@ def _hash(text):
     """
     return hashlib.sha1(text.encode('utf-8')).hexdigest()
 
+
+
+# Define the base 62 alphabet: 0-9, A-Z, a-z (a total of 62 characters)
+ALPHABET_BASE62 = string.digits + string.ascii_uppercase + string.ascii_lowercase
+BASE = len(ALPHABET_BASE62) # BASE = 62
+
+# --- Auxiliary Mathematical Functions ---
+
+def _mod_inverse(a, m):
+    """Finds the modular multiplicative inverse of 'a' modulo 'm'."""
+    # The inverse only exists if gcd(a, m) == 1.
+    g, x, y = _extended_gcd(a, m)
+    if g != 1:
+        return None
+    return (x % m + m) % m
+
+def _extended_gcd(a, b):
+    """Extended Euclidean Algorithm to find gcd(a, b) and coefficients."""
+    if a == 0:
+        return b, 0, 1
+    gcd, x1, y1 = _extended_gcd(b % a, a)
+    x = y1 - (b // a) * x1
+    y = x1
+    return gcd, x, y
+
+def _char_to_num(char):
+    """Converts a character to its numerical value in base 62."""
+    return ALPHABET_BASE62.index(char)
+
+def _num_to_char(num):
+    """Converts a numerical value to its character in base 62."""
+    return ALPHABET_BASE62[num]
+
+# --- Main Cipher and Decipher Functions (Using NumPy) ---
+
+def _encrypt_base_62(plaintext, key_matrix = [
+    [1, 5, 10,  2],
+    [0, 1, 3,   7],
+    [0, 0, 1,   4],
+    [0, 0, 0, 991]
+    ]):
+    """Encrypts a plaintext message in base 62 using an N x N key with NumPy."""
+    # Convert the Python list to a NumPy array and check if it's square
+    key_matrix_np = np.array(key_matrix, dtype=int)
+    N = key_matrix_np.shape[0]
+    if key_matrix_np.shape[0] != key_matrix_np.shape[1]:
+        raise ValueError("The key must be a square matrix (N x N).")
+        
+    plaintext = "".join(c for c in plaintext if c in ALPHABET_BASE62)
+    
+    # Auto-padding to ensure the length is a multiple of N
+    if len(plaintext) % N != 0:
+        plaintext += '0' * (N - (len(plaintext) % N))
+
+    ciphertext = ""
+    for i in range(0, len(plaintext), N):
+        block = plaintext[i:i+N]
+        # Convert block to a numerical vector (NumPy column array)
+        p_vector = np.array([_char_to_num(c) for c in block], dtype=int).reshape(N, 1)
+        
+        # Matrix multiplication: Key * p_vector mod BASE
+        # numpy.dot performs matrix multiplication
+        c_vector = np.dot(key_matrix_np, p_vector) % BASE
+            
+        # Convert the ciphered vector back to characters
+        ciphertext += "".join(_num_to_char(c[0]) for c in c_vector)
+        
+    return ciphertext
+
+def _decrypt_base_62(ciphertext, key_matrix = [
+    [1, 5, 10,  2],
+    [0, 1, 3,   7],
+    [0, 0, 1,   4],
+    [0, 0, 0, 991]
+    ]):
+    """Decrypts a ciphertext message in base 62 using the N x N key with NumPy."""
+    key_matrix_np = np.array(key_matrix, dtype=int)
+    N = key_matrix_np.shape[0]
+
+    if len(ciphertext) % N != 0:
+        raise ValueError("The length of the ciphertext must be a multiple of N.")
+
+    # --- Modular Matrix Inverse Calculation using NumPy and custom logic ---
+
+    # 1. Calculate the determinant of the original matrix
+    # Use numpy.linalg.det, rounded to ensure it is an integer
+    det = round(np.linalg.det(key_matrix_np))
+    det_mod62 = det % BASE
+    
+    # 2. Find the modular inverse of the determinant
+    det_inv = _mod_inverse(det_mod62, BASE)
+
+    if det_inv is None:
+        raise ValueError(f"Determinant ({det_mod62}) is not invertible mod {BASE}. Choose a different key.")
+
+    # 3. Calculate the real inverse matrix using NumPy and convert to modular
+    # numpy.linalg.inv() calculates the inverse using floats
+    inv_matrix_float = np.linalg.inv(key_matrix_np)
+    # The adjugate matrix is det * inv_matrix (rounded to nearest int)
+    adjugate_matrix = (det * inv_matrix_float).round().astype(int)
+
+    # 4. Multiply the adjugate by the modular inverse of the determinant and apply mod BASE
+    inv_key_matrix_mod = (adjugate_matrix * det_inv) % BASE
+
+    # --- Decryption Process ---
+    plaintext = ""
+    for i in range(0, len(ciphertext), N):
+        block = ciphertext[i:i+N]
+        # Convert block to a numerical vector (NumPy column array)
+        c_vector = np.array([_char_to_num(c) for c in block], dtype=int).reshape(N, 1)
+        
+        # Matrix multiplication: Inverse_Key_Matrix * c_vector mod BASE
+        p_vector = np.dot(inv_key_matrix_mod, c_vector) % BASE
+            
+        # Convert the deciphered vector back to characters
+        plaintext += "".join(_num_to_char(p[0]) for p in p_vector)
+        
+    return plaintext
+
+_encrypt = _encrypt_base_62
+_decrypt = _decrypt_base_62
+
 def _id():
-    """Return a new unique ID chronologically sortable for a task."""
-    return uuid7().hex
+    """Return a new unique ciphered base62 ID sortable for a task."""
+    global _id_counter
+    _id_counter += 1
+    plaintext_id = f'{_id_counter:06d}'
+    ciphered_id = _encrypt(plaintext_id)
+    return ciphered_id
 
 def _parse_text_and_metadata_from_taskline(line: str):
     text, sep, content = line.partition('|')
     return (text.strip(), content.strip()) if sep else (line.strip(), None)
-
-def _sort_ids(p_id, c_id, n_id):
-    """Return the sorted order of the given IDs, ignoring None values."""
-    ids = [i for i in (p_id, c_id, n_id) if i is not None]
-    ids.sort()
-    return ids
-
-def _task_based_on_neighbour_lines(c_line: str, p_line: str, n_line: str) -> tuple[dict, dict, dict]:
-    def _delta_task_id(task_id : str, increase = True, next_task_id = ''):
-        start = UUID(task_id)
-        time.sleep(0.025) # increase difference between UUIDs
-        before = UUID(_id())
-        after = (UUID(_id()).int - before.int) % (1 << 32)\
-                if not next_task_id else \
-                (UUID(next_task_id).int - start.int) %  (1 << 32) // 2
-        return UUID(
-                int = start.int + (after if increase else -after)
-        ).hex
-
-    """
-    Given the current, previous and next tasklines, return the current tasks
-    taking into account the neighbour states.
-    """
-    c = _build_task(
-            *_parse_text_and_metadata_from_taskline(c_line)
-            )
-    p = _build_task(
-            *_parse_text_and_metadata_from_taskline(p_line)
-            ) if p_line else dict()
-    n = _build_task(
-            *_parse_text_and_metadata_from_taskline(n_line)
-            ) if n_line else dict()
-    c_id = c.get('id', None)
-    p_id = p.get('id', None)
-    n_id = n.get('id', None)
-
-    match (
-            c_id is not None,
-            p_id is not None,
-            n_id is not None
-            ):
-        # None, None, None which means new task
-        case [False, False, False]: 
-            c['id'] = _id()
-        # Has previous and next tasks with IDs, so we can generate
-        # a new ID and assign it in order to current, previous and next
-        # while keeping the order
-        case [False, True, True]:
-            c_id = _delta_task_id(
-                    p_id,
-                    increase=True,
-                    next_task_id=n_id
-            )
-            p['id'], c['id'], n['id'] = _sort_ids(p_id, c_id, n_id)
-        # Has previous task without ID, but current and next both have IDs
-        case [True, False, True]:
-            p_id = _delta_task_id(c_id, increase=False)
-            p['id'], c['id'], n['id'] = _sort_ids(p_id, c_id, n_id)
-        # Has next task without ID, but current and previous both have IDs
-        case [True, True, False]:
-            n_id = _delta_task_id(c_id, increase=True)
-            p['id'], c['id'], n['id'] = _sort_ids(p_id, c_id, n_id)
-        # Has only current task with ID, so we generate two new IDs.
-        # from the current one, making previous smaller and next larger.
-        case [True, False, False]:
-            p_id = _delta_task_id(c_id, increase=False)
-            n_id = _delta_task_id(c_id, increase=True)
-            p['id'], c['id'], n['id'] = p_id, c_id, n_id
-        # Has only previous task with ID, so we generate two new IDs.
-        case [False, True, False]:
-            c_id = _delta_task_id(p_id, increase=True)
-            n_id = _delta_task_id(c_id, increase=True)
-            p['id'], c['id'], n['id'] = p_id, c_id, n_id
-        # Has only next task with ID, so we generate two new IDs.
-        # from the next one, making current smaller and previous even smaller.
-        case [False, False, True]:
-            c_id = _delta_task_id(n_id, increase=False)
-            p_id = _delta_task_id(c_id, increase=False)
-            p['id'], c['id'], n['id'] = p_id, c_id, n_id
-        # If everyone has IDs, we order them only to keep consistency
-        case [True, True, True]:
-            p['id'], c['id'], n['id'] = _sort_ids(p_id, c_id, n_id)
-
-    return (c, p, n)
 
 def _build_task(text, metadata = None):
     task = { 'text': text }
@@ -143,50 +181,6 @@ def _build_task(text, metadata = None):
             label, data = piece.split(':')
             task[label.strip()] = data.strip()
     return task
-
-
-def _task_from_taskline(current_line, previous_line, next_line):
-    """Parse a taskline (from a task file) and return a task.
-
-    A taskline should be in the format:
-
-        summary text ... | meta1:meta1_value,meta2:meta2_value,...
-
-    The task returned will be a dictionary such as:
-
-        { 'id': <hash id>,
-          'text': <summary text>,
-           ... other metadata ... }
-
-    We'll also return updated versions of current_line, previous_line
-    and next_line to reflect any modifications performed to keep IDs
-    consistent and ordered.
-
-    A taskline can also consist of only summary text, in which case the id
-    and other metadata will be generated when the line is read.  This is
-    supported to enable editing of the taskfile with a simple text editor.
-    """
-    if current_line.strip().startswith('#'): # Skip comments
-        return [ None ] * 4
-    """
-    Current task should always reflect neighbour states, so we can keep IDs
-    consistent and ordered even if the taskfile is edited manually.
-    """
-    c, p, n = _task_based_on_neighbour_lines(
-            current_line,
-            previous_line,
-            next_line
-            )
-
-    previous_line = _taskline_from_task(p) if 'text' in p else previous_line
-    next_line = _taskline_from_task(n) if 'text' in n else next_line
-    current_line = _taskline_from_task(c)
-
-    """
-        We'll also update current_line, previous_line and next_line to
-        reflect any modifications possibly performed
-    """
-    return c, current_line, previous_line, next_line
 
 def _taskline_from_task(task):
     """Parse a task into a taskline suitable for writing."""
@@ -245,48 +239,44 @@ def _summary_line(taskline):
     _, sep, _ = taskline.partition('|')
     return sep == ''
 
-def _ensure_tasklines_consistency(tls):
+def _ensure_tasklines_consistency(tls, default_start = 0):
     """
     Ensure that after a summary line is found, all subsequent lines will
-    be transformed into summary lines, so every task has a unique and 
+    be transformed into summary lines, so every task has a unique and
     sortable ID.
     """
     summary_lines = list(map(_summary_line, tls))
     summary_idx = summary_lines.index(True) if True in summary_lines else -1
     if summary_idx != -1:
+        _ensure_id_counter_consistency_for_summary_tasks(summary_idx, default_start = default_start)
         for i in range(summary_idx, len(tls)):
             if not _summary_line(tls[i]):
                 text, _ = _parse_text_and_metadata_from_taskline(tls[i])
                 tls[i] = text
     return tls
 
-def _handle_tasks(tls, past_shifted_tls, future_shifted_tls):
+def _ensure_id_counter_consistency_for_summary_tasks(summary_idx, default_start = 0):
     """
-    Given a list of tasklines, return the corresponding tasks.
-    We'll also perform modifications to the tasklines to keep IDs consistent
-    and ordered based on neighbour states.
-    """ 
-    tasks = []
-    number_of_tasks = len(tls)
-    for i in range(number_of_tasks):
-        c_line = tls[i]
-        p_line = past_shifted_tls[i]
-        n_line = future_shifted_tls[i]
-        task, c_line, p_line, n_line = _task_from_taskline(
-            c_line, p_line, n_line
-        )
-        tls[i] = c_line
-        past_shifted_tls[i] = p_line
-        # bind current line to the next past shifted line
-        past_shifted_tls[
-            (i + 1) % number_of_tasks
-        ] = c_line
-        future_shifted_tls[i] = n_line
-        tasks.append(task)
+    Ensure that the global ID counter is set to the value of the last
+    non-summary task's ID + 1, so that newly created tasks will
+    have unique IDs. That is the index of the first summary line +
+    default_start.
+    """
+    global _id_counter
+    _id_counter = default_start + summary_idx - 1
 
-    return tasks, tls, past_shifted_tls, future_shifted_tls
+def _ensure_id_counter_consistency_for_current_task(task):
+    '''
+    Ensure that the global ID counter is set to the value of the
+    current task's ID, so that newly created tasks will have its
+    ID + 1.
+    '''
+    global _id_counter
+    if task is not None:
+        task_id_decrypted = int(_decrypt(task['id']))
+        _id_counter = task_id_decrypted
 
-def _task_from_taskline_simple(line, tasks_hashes_id_map):
+def _task_from_taskline(line, tasks_hashes_id_map):
     """Parse a taskline (from a task file) and return a task.
 
     A taskline should be in the format:
@@ -309,14 +299,17 @@ def _task_from_taskline_simple(line, tasks_hashes_id_map):
         tasks_hashes_id_map[_hash(text)] = task['id']
     return task
 
-def _handle_tasks_simple(tls, tasks_hashes_id_map):
+def _handle_tasks(tls, tasks_hashes_id_map):
     """
     Given a list of properly consistent tasklines, return the corresponding tasks.
     """
+    global _id_counter
     tasks = []
     for line in tls:
-        task = _task_from_taskline_simple(line, tasks_hashes_id_map)
+        task = _task_from_taskline(line, tasks_hashes_id_map)
         tasks += [task] if task not in tasks else []
+        # update global ID counter to ensure consistency
+        _ensure_id_counter_consistency_for_current_task(task)
     return tasks
 
 
@@ -327,7 +320,7 @@ class TaskDict(object):
     can be written back out to disk with the write() function.
 
     """
-    def __init__(self, taskdir='.', name='tasks'):
+    def __init__(self, taskdir='.', name='tasks', default_start=0):
         """Initialize by reading the task files, if they exist."""
         self.tasks = {}
         self.tasks_hashes_id_map = {}
@@ -343,22 +336,11 @@ class TaskDict(object):
                 try:
                     with open(path, 'r') as tfile:
                         tls = [tl.strip() for tl in tfile if tl]
-                        tls = _ensure_tasklines_consistency(tls)
-                        # Simple version without neighbour-based ID consistency
-                        tasks = _handle_tasks_simple(
+                        tls = _ensure_tasklines_consistency(tls, default_start=default_start)
+                        tasks = _handle_tasks(
                             tls,
                             self.tasks_hashes_id_map
                         )
-                        '''
-                        dumb-fuckery
-                        past_shifted_tls = [''] + tls[:-1]
-                        future_shifted_tls = tls[1:] + ['']
-                        tasks, tls, past_shifted_tls, future_shifted_tls = _handle_tasks(
-                            tls,
-                            past_shifted_tls,
-                            future_shifted_tls
-                        )
-                        '''
                         for task in tasks:
                             if task is not None:
                                 # 1. Add task to self.tasks dict if it
@@ -453,7 +435,10 @@ class TaskDict(object):
                 tasks[task_id]['prefix'] = prefix
 
         plen = max(map(lambda t: len(t[label]), tasks.values())) if tasks else 0
-        for _, task in sorted(tasks.items()):
+        for _, task in sorted(
+            tasks.items(),
+            key = lambda x: int(_decrypt(x[1]['id']))
+        ):
             if grep.lower() in task['text'].lower():
                 p = '%s - ' % task[label].ljust(plen) if not quiet else ''
                 print(p + task['text'])
@@ -465,7 +450,9 @@ class TaskDict(object):
             path = os.path.join(os.path.expanduser(self.taskdir), filename)
             if os.path.isdir(path):
                 raise InvalidTaskfile
-            tasks = sorted(getattr(self, kind).values(), key=itemgetter('id'))
+            tasks = sorted(
+                getattr(self, kind).values(), key = lambda x: int(_decrypt(x['id']))
+            )
             if tasks or not delete_if_empty:
                 try:
                     with open(path, 'w') as tfile:
@@ -559,6 +546,7 @@ def _main():
     except BadFile as e:
         _die('%s - %s' % (e.problem, e.path))
 
+_id_counter = 62**2
 
 if __name__ == '__main__':
     _main()
