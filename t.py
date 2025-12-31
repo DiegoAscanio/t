@@ -274,7 +274,8 @@ def _ensure_id_counter_consistency_for_current_task(task):
     global _id_counter
     if task is not None:
         task_id_decrypted = int(_decrypt(task['id']))
-        _id_counter = task_id_decrypted
+        if task_id_decrypted > _id_counter:
+            _id_counter = task_id_decrypted
 
 def _task_from_taskline(line, tasks_hashes_id_map):
     """Parse a taskline (from a task file) and return a task.
