@@ -239,7 +239,7 @@ def _summary_line(taskline):
     _, sep, _ = taskline.partition('|')
     return sep == ''
 
-def _ensure_tasklines_consistency(tls, default_start = 0):
+def _ensure_tasklines_consistency(tls, default_start = 62**2):
     """
     Ensure that after a summary line is found, all subsequent lines will
     be transformed into summary lines, so every task has a unique and
@@ -255,7 +255,7 @@ def _ensure_tasklines_consistency(tls, default_start = 0):
                 tls[i] = text
     return tls
 
-def _ensure_id_counter_consistency_for_summary_tasks(summary_idx, default_start = 0):
+def _ensure_id_counter_consistency_for_summary_tasks(summary_idx, default_start = 62**2):
     """
     Ensure that the global ID counter is set to the value of the last
     non-summary task's ID + 1, so that newly created tasks will
@@ -321,7 +321,7 @@ class TaskDict(object):
     can be written back out to disk with the write() function.
 
     """
-    def __init__(self, taskdir='.', name='tasks', default_start=0):
+    def __init__(self, taskdir='.', name='tasks', default_start = 62**2):
         """Initialize by reading the task files, if they exist."""
         self.tasks = {}
         self.tasks_hashes_id_map = {}
