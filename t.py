@@ -239,7 +239,12 @@ def _summary_line(taskline):
     _, sep, _ = taskline.partition('|')
     return sep == ''
 
-def _ensure_tasklines_consistency(tls, default_start = 62**2):
+def _compute_default_start(name, start = 0):
+    """Compute a default starting point for the ID counter based on the name of the list."""
+    salt = sum(ord(c) * 62 ** i for i, c in enumerate(name[:5]))
+    return salt + start
+
+def _ensure_tasklines_consistency(tls, default_start):
     """
     Ensure that after a summary line is found, all subsequent lines will
     be transformed into summary lines, so every task has a unique and
@@ -255,7 +260,7 @@ def _ensure_tasklines_consistency(tls, default_start = 62**2):
                 tls[i] = text
     return tls
 
-def _ensure_id_counter_consistency_for_summary_tasks(summary_idx, default_start = 62**2):
+def _ensure_id_counter_consistency_for_summary_tasks(summary_idx, default_start):
     """
     Ensure that the global ID counter is set to the value of the last
     non-summary task's ID + 1, so that newly created tasks will
@@ -321,7 +326,9 @@ class TaskDict(object):
     can be written back out to disk with the write() function.
 
     """
-    def __init__(self, taskdir='.', name='tasks', default_start = 62**2):
+    def __init__(self, taskdir='.', name='tasks', default_start = None):
+        if default_start is None:
+            default_start = _compute_default_start(name)
         """Initialize by reading the task files, if they exist."""
         self.tasks = {}
         self.tasks_hashes_id_map = {}
@@ -512,8 +519,11 @@ def _build_parser():
     return parser
 
 def _main():
+    global _id_counter
     """Run the command-line interface."""
     (options, args) = _build_parser().parse_args()
+
+    _id_counter = _compute_default_start(options.name)
 
     td = TaskDict(taskdir=options.taskdir, name=options.name)
     text = ' '.join(args).strip()
@@ -546,8 +556,6 @@ def _main():
         _die('the ID "%s" does not match any task' % e.prefix)
     except BadFile as e:
         _die('%s - %s' % (e.problem, e.path))
-
-_id_counter = 62**2
 
 if __name__ == '__main__':
     _main()
